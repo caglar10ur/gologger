@@ -1,33 +1,39 @@
 package logger
 
 import "testing"
+import "os"
 
 func TestLogger(t *testing.T) {
-    logger := New()
-
-    generate := func() {
-        logger.Debugln("foo")
-        logger.Infoln("foo")
-        logger.Warnln("foo")
-        logger.Errorln("foo")
-        logger.Fatalln("foo")
-        logger.Debugf("%.2f %s", 3.14159265359, "bar")
-        logger.Infof("%.2f %s", 3.14159265359, "bar")
-        logger.Warnf("%.2f %s", 3.14159265359, "bar")
-        logger.Errorf("%.2f %s", 3.14159265359, "bar")
-        logger.Fatalf("%.2f %s", 3.14159265359, "bar")
+    generate := func(ll *Logger) {
+        ll.Debugln("foo")
+        ll.Infoln("foo")
+        ll.Warnln("foo")
+        ll.Errorln("foo")
+        ll.Fatalln("foo")
+        ll.Debugf("%.2f %s", 3.14159265359, "bar")
+        ll.Infof("%.2f %s", 3.14159265359, "bar")
+        ll.Warnf("%.2f %s", 3.14159265359, "bar")
+        ll.Errorf("%.2f %s", 3.14159265359, "bar")
+        ll.Fatalf("%.2f %s", 3.14159265359, "bar")
     }
 
-    logger.SetLogLevel(Debug)
-    generate()
-    logger.SetLogLevel(Warn)
-    logger.SetFlags()
-    generate()
-    logger.UnsetFlags()
-    generate()
+    logfile, _ := os.OpenFile("foo", os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0644)
 
-    logger.SetOutput("foo")
-    generate()
-    logger.SetFlags()
-    generate()
+    logger := New(logfile)
+    logger.SetLogLevel(Error)
+    generate(logger)
+
+    logger.SetTraceFlags()
+    generate(logger)
+    logger.SetDebugFlags()
+    generate(logger)
+
+    logger = New(nil)
+    logger.SetLogLevel(Error)
+    generate(logger)
+
+    logger.SetTraceFlags()
+    generate(logger)
+    logger.SetDebugFlags()
+    generate(logger)
 }

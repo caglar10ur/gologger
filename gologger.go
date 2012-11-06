@@ -1,11 +1,18 @@
 package logger
 
+import "fmt"
+import "io"
 import "log"
 import "os"
 import "sync"
 
-type LogLevel int
+const calldepth     = 3
 
+const flags         = log.Ldate | log.Ltime
+const trace_flags   = log.Ldate | log.Ltime | log.Lshortfile
+const debug_flags   = log.Ldate | log.Ltime | log.Lmicroseconds | log.Llongfile
+
+type LogLevel int
 const (
     Debug LogLevel = iota
     Info
@@ -14,7 +21,7 @@ const (
     Fatal
 )
 
-var logLevelToString map[LogLevel]string = map[LogLevel]string {
+var llToStr map[LogLevel]string = map[LogLevel]string {
     Fatal: "[FATAL]",
     Error: "[ERROR]",
     Warn:  "[WARN]",
@@ -24,12 +31,20 @@ var logLevelToString map[LogLevel]string = map[LogLevel]string {
 
 type Logger struct {
     // ensures atomic writes
-    mu     sync.Mutex
-    Level LogLevel
+    mu      sync.Mutex
+    Logger  *log.Logger
+    Level   LogLevel
 }
 
-func New() *Logger {
-    return &Logger{Level: Info}
+func New(out io.Writer) *Logger {
+    var logger *log.Logger
+
+    if out == nil {
+        logger = log.New(os.Stderr, "", flags)
+    } else {
+        logger = log.New(out, "", flags)
+    }
+    return &Logger{Level: Info, Logger: logger}
 }
 
 func (l *Logger) SetLogLevel(ll LogLevel) {
@@ -40,32 +55,22 @@ func (l *Logger) SetLogLevel(ll LogLevel) {
     }
 }
 
-func (l *Logger) SetOutput(filename string) {
-    logfile, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE|os.O_SYNC, 0644)
-    if err != nil {
-        log.Fatal("Unable to open log file: ", err)
-    }
-    log.SetOutput(logfile)
-}
+func (l *Logger) SetFlags() { l.mu.Lock(); defer l.mu.Unlock(); l.Logger.SetFlags(flags); l.Logger.SetPrefix("") }
 
-func (l *Logger) SetFlags() {
-    log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Llongfile)
-}
+func (l *Logger) SetTraceFlags() { l.mu.Lock(); defer l.mu.Unlock(); l.Logger.SetFlags(trace_flags); l.Logger.SetPrefix("") }
 
-func (l *Logger) UnsetFlags() {
-    log.SetFlags(log.Ldate | log.Ltime)
-}
+func (l *Logger) SetDebugFlags() { l.mu.Lock(); defer l.mu.Unlock(); l.Logger.SetFlags(debug_flags); l.Logger.SetPrefix(fmt.Sprintf("[%d %s] ", os.Getpid(), os.Args[0])) }
 
 func (l *Logger) outputln(ll LogLevel, v ...interface{}) {
     if l.Level <= ll {
-        v = append([]interface{}{logLevelToString[ll]}, v...)
-        log.Println(v...)
+        v = append([]interface{}{llToStr[ll]}, v...)
+        l.Logger.Output(calldepth, fmt.Sprintln(v...))
     }
 }
 
 func (l *Logger) outputf(ll LogLevel, format string, v ...interface{}) {
     if l.Level <= ll {
-        log.Printf(logLevelToString[ll] + " " + format, v...)
+        l.Logger.Output(calldepth, fmt.Sprintf(llToStr[ll] + " " + format, v...))
     }
 }
 
