@@ -1,77 +1,117 @@
 package logger
 
-import "fmt"
-import "io"
-import "log"
-import "os"
-import "sync"
-
-const calldepth     = 3
-
-const flags         = log.Ldate | log.Ltime
-const trace_flags   = log.Ldate | log.Ltime | log.Lshortfile
-const debug_flags   = log.Ldate | log.Ltime | log.Lmicroseconds | log.Llongfile
-
-type LogLevel int
-const (
-    Debug LogLevel = iota
-    Info
-    Warn
-    Error
-    Fatal
+import (
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"sync"
 )
 
-var llToStr map[LogLevel]string = map[LogLevel]string {
-    Fatal: "[FATAL]",
-    Error: "[ERROR]",
-    Warn:  "[WARN]",
-    Info:  "[INFO]",
-    Debug: "[DEBUG]",
+// calldepth is defined in log.go and uses 2 hence we use 3
+const (
+	calldepth = 3
+
+	LstdFlags   = log.Ldate | log.Ltime
+	LtraceFlags = log.Ldate | log.Ltime | log.Lshortfile
+	LdebugFlags = log.Ldate | log.Ltime | log.Lmicroseconds | log.Llongfile
+)
+
+// LogLevel type
+type LogLevel int
+
+const (
+	Debug LogLevel = iota
+	Info
+	Warn
+	Error
+	Fatal
+)
+
+var llToStr map[LogLevel]string = map[LogLevel]string{
+	Fatal: "[FATAL]",
+	Error: "[ERROR]",
+	Warn:  "[WARN]",
+	Info:  "[INFO]",
+	Debug: "[DEBUG]",
 }
 
 type Logger struct {
-    // ensures atomic writes
-    mu      sync.Mutex
-    Logger  *log.Logger
-    Level   LogLevel
+	mu     sync.Mutex // protects the following fields
+	logger *log.Logger
+	level  LogLevel
 }
 
 func New(out io.Writer) *Logger {
-    var logger *log.Logger
+	var logger *log.Logger
 
-    if out == nil {
-        logger = log.New(os.Stderr, "", flags)
-    } else {
-        logger = log.New(out, "", flags)
-    }
-    return &Logger{Level: Info, Logger: logger}
+	if out == nil {
+		logger = log.New(os.Stderr, "", LstdFlags)
+	} else {
+		logger = log.New(out, "", LstdFlags)
+	}
+	return &Logger{level: Info, logger: logger}
 }
 
+// LogLevel returns the output log level for the standard logger.
+func (l *Logger) LogLevel() LogLevel {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.level
+}
+
+// SetLogLevel sets the output log level for the standard logger.
 func (l *Logger) SetLogLevel(ll LogLevel) {
-    if ll >= Debug && ll <= Fatal {
-        l.mu.Lock()
-        defer l.mu.Unlock()
-        l.Level = ll
-    }
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if ll >= Debug && ll <= Fatal {
+		l.level = ll
+
+		switch ll {
+		case Debug:
+			l.logger.SetFlags(LdebugFlags)
+			l.logger.SetPrefix(fmt.Sprintf("[%d %s] ", os.Getpid(), os.Args[0]))
+			//		case Error:
+			//			l.logger.SetFlags(LtraceFlags)
+			//			l.logger.SetPrefix("")
+		default:
+			l.logger.SetFlags(LstdFlags)
+			l.logger.SetPrefix("")
+		}
+	}
 }
 
-func (l *Logger) SetFlags() { l.mu.Lock(); defer l.mu.Unlock(); l.Logger.SetFlags(flags); l.Logger.SetPrefix("") }
+// Flags returns the output flags for the standard logger.
+func (l *Logger) Flags() int {
+	return l.logger.Flags()
+}
 
-func (l *Logger) SetTraceFlags() { l.mu.Lock(); defer l.mu.Unlock(); l.Logger.SetFlags(trace_flags); l.Logger.SetPrefix("") }
+// SetFlags sets the output flags for the standard logger.
+func (l *Logger) SetFlags(flag int) {
+	l.logger.SetFlags(flag)
+}
 
-func (l *Logger) SetDebugFlags() { l.mu.Lock(); defer l.mu.Unlock(); l.Logger.SetFlags(debug_flags); l.Logger.SetPrefix(fmt.Sprintf("[%d %s] ", os.Getpid(), os.Args[0])) }
+// Prefix returns the output prefix for the logger.
+func (l *Logger) Prefix() string {
+	return l.logger.Prefix()
+}
+
+// SetPrefix sets the output prefix for the logger.
+func (l *Logger) SetPrefix(prefix string) {
+	l.logger.SetPrefix(prefix)
+}
 
 func (l *Logger) outputln(ll LogLevel, v ...interface{}) {
-    if l.Level <= ll {
-        v = append([]interface{}{llToStr[ll]}, v...)
-        l.Logger.Output(calldepth, fmt.Sprintln(v...))
-    }
+	if l.level <= ll {
+		v = append([]interface{}{llToStr[ll]}, v...)
+		l.logger.Output(calldepth, fmt.Sprintln(v...))
+	}
 }
 
 func (l *Logger) outputf(ll LogLevel, format string, v ...interface{}) {
-    if l.Level <= ll {
-        l.Logger.Output(calldepth, fmt.Sprintf(llToStr[ll] + " " + format, v...))
-    }
+	if l.level <= ll {
+		l.logger.Output(calldepth, fmt.Sprintf(llToStr[ll]+" "+format, v...))
+	}
 }
 
 func (l *Logger) Debugln(v ...interface{}) { l.outputln(Debug, v...) }
