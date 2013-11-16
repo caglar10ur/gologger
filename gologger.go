@@ -21,14 +21,19 @@ const (
 type LogLevel int
 
 const (
+	// Debug level
 	Debug LogLevel = iota
+	// Info level
 	Info
+	// Warn level
 	Warn
+	// Error level
 	Error
+	// Fatal level
 	Fatal
 )
 
-var llToStr map[LogLevel]string = map[LogLevel]string{
+var llToStr = map[LogLevel]string{
 	Fatal: "[FATAL]",
 	Error: "[ERROR]",
 	Warn:  "[WARN]",
@@ -36,12 +41,14 @@ var llToStr map[LogLevel]string = map[LogLevel]string{
 	Debug: "[DEBUG]",
 }
 
+// A Logger represents an active logging object that generates lines of output to an io.Writer.
 type Logger struct {
 	mu     sync.Mutex // protects the following fields
 	logger *log.Logger
 	level  LogLevel
 }
 
+// New creates a new Logger.
 func New(out io.Writer) *Logger {
 	var logger *log.Logger
 
@@ -89,16 +96,19 @@ func (l *Logger) SetPrefix(prefix string) {
 	l.logger.SetPrefix(prefix)
 }
 
+// EnableStdOutput provides a shortcut for setting std flags/prefix
 func (l *Logger) EnableStdOutput() {
 	l.logger.SetFlags(LstdFlags)
 	l.logger.SetPrefix("")
 }
 
+// EnableDebugOutput provides a shortcut for setting debug flags/prefix
 func (l *Logger) EnableDebugOutput() {
 	l.logger.SetFlags(LdebugFlags)
 	l.logger.SetPrefix(fmt.Sprintf("[%d %s] ", os.Getpid(), os.Args[0]))
 }
 
+// EnableTraceOutput provides a shortcut for setting trace flags/prefix
 func (l *Logger) EnableTraceOutput() {
 	l.logger.SetFlags(LtraceFlags)
 	l.logger.SetPrefix("")
