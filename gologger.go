@@ -33,12 +33,20 @@ const (
 	Fatal
 )
 
-var llToStr = map[LogLevel]string{
-	Fatal: "[FATAL]",
-	Error: "[ERROR]",
-	Warn:  "[WARN]",
-	Info:  "[INFO]",
-	Debug: "[DEBUG]",
+func (l LogLevel) String() string {
+	switch l {
+	case Fatal:
+		return "[FATAL]"
+	case Error:
+		return "[ERROR]"
+	case Warn:
+		return "[WARN]"
+	case Info:
+		return "[INFO]"
+	case Debug:
+		return "[DEBUG]"
+	}
+	return "<INVALID>"
 }
 
 // A Logger represents an active logging object that generates lines of output to an io.Writer.
@@ -116,14 +124,14 @@ func (l *Logger) EnableTraceOutput() {
 
 func (l *Logger) outputln(ll LogLevel, v ...interface{}) {
 	if l.level <= ll {
-		v = append([]interface{}{llToStr[ll]}, v...)
+		v = append([]interface{}{ll}, v...)
 		l.logger.Output(calldepth, fmt.Sprintln(v...))
 	}
 }
 
 func (l *Logger) outputf(ll LogLevel, format string, v ...interface{}) {
 	if l.level <= ll {
-		l.logger.Output(calldepth, fmt.Sprintf(llToStr[ll]+" "+format, v...))
+		l.logger.Output(calldepth, fmt.Sprintf(ll.String()+" "+format, v...))
 	}
 }
 
