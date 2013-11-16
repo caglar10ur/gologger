@@ -22,7 +22,7 @@ func main() {
     l.SetLogLevel(logger.Debug)
 
     // Enable tracing
-    l.SetTraceFlags()
+    l.EnableTraceOutput()
     l.Debugln("...DEBUG LEVEL LOG...")
 }
 ```
