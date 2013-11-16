@@ -23,21 +23,21 @@ func TestLogger(t *testing.T) {
 	logger.SetLogLevel(Error)
 	generate(logger)
 
-	logger.SetFlags(LtraceFlags)
+	logger.EnableTraceOutput()
 	generate(logger)
-	logger.SetFlags(LdebugFlags)
+	logger.EnableDebugOutput()
 	generate(logger)
-	logger.SetFlags(LstdFlags)
+	logger.EnableStdOutput()
 	generate(logger)
 
 	logger = New(nil)
 	logger.SetLogLevel(Error)
 	generate(logger)
 
-	logger.SetFlags(LtraceFlags)
+	logger.EnableTraceOutput()
 	generate(logger)
-	logger.SetFlags(LdebugFlags)
+	logger.EnableDebugOutput()
 	generate(logger)
-	logger.SetFlags(LstdFlags)
+	logger.EnableStdOutput()
 	generate(logger)
 }

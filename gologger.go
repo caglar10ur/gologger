@@ -66,18 +66,6 @@ func (l *Logger) SetLogLevel(ll LogLevel) {
 	defer l.mu.Unlock()
 	if ll >= Debug && ll <= Fatal {
 		l.level = ll
-
-		switch ll {
-		case Debug:
-			l.logger.SetFlags(LdebugFlags)
-			l.logger.SetPrefix(fmt.Sprintf("[%d %s] ", os.Getpid(), os.Args[0]))
-			//		case Error:
-			//			l.logger.SetFlags(LtraceFlags)
-			//			l.logger.SetPrefix("")
-		default:
-			l.logger.SetFlags(LstdFlags)
-			l.logger.SetPrefix("")
-		}
 	}
 }
 
@@ -99,6 +87,21 @@ func (l *Logger) Prefix() string {
 // SetPrefix sets the output prefix for the logger.
 func (l *Logger) SetPrefix(prefix string) {
 	l.logger.SetPrefix(prefix)
+}
+
+func (l *Logger) EnableStdOutput() {
+	l.logger.SetFlags(LstdFlags)
+	l.logger.SetPrefix("")
+}
+
+func (l *Logger) EnableDebugOutput() {
+	l.logger.SetFlags(LdebugFlags)
+	l.logger.SetPrefix(fmt.Sprintf("[%d %s] ", os.Getpid(), os.Args[0]))
+}
+
+func (l *Logger) EnableTraceOutput() {
+	l.logger.SetFlags(LtraceFlags)
+	l.logger.SetPrefix("")
 }
 
 func (l *Logger) outputln(ll LogLevel, v ...interface{}) {
