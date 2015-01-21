@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
+	"sync/atomic"
 )
 
 // calldepth is defined in log.go and uses 2 hence we use 3
@@ -18,7 +18,7 @@ const (
 )
 
 // LogLevel type
-type LogLevel int
+type LogLevel int32
 
 const (
 	// Debug level
@@ -33,25 +33,31 @@ const (
 	Fatal
 )
 
-func (l LogLevel) String() string {
-	switch l {
-	case Fatal:
-		return "[FATAL]"
-	case Error:
-		return "[ERROR]"
-	case Warn:
-		return "[WARN]"
-	case Info:
-		return "[INFO]"
-	case Debug:
-		return "[DEBUG]"
+var LogLevelMap = map[LogLevel]string{
+	Debug: "[DEBUG]",
+	Info:  "[INFO]",
+	Warn:  "[WARN]",
+	Error: "[ERROR]",
+	Fatal: "[FATAL]",
+}
+
+func (l *LogLevel) get() LogLevel {
+	return LogLevel(atomic.LoadInt32((*int32)(l)))
+}
+
+func (l *LogLevel) set(ll LogLevel) {
+	atomic.StoreInt32((*int32)(l), int32(ll))
+}
+
+func (l *LogLevel) String() string {
+	if v, ok := LogLevelMap[l.get()]; ok {
+		return v
 	}
-	return "<INVALID>"
+	return "[INVALID]"
 }
 
 // A Logger represents an active logging object that generates lines of output to an io.Writer.
 type Logger struct {
-	mu     sync.Mutex // protects the following fields
 	logger *log.Logger
 	level  LogLevel
 }
@@ -70,17 +76,13 @@ func New(out io.Writer) *Logger {
 
 // LogLevel returns the output log level for the standard logger.
 func (l *Logger) LogLevel() LogLevel {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.level
+	return l.level.get()
 }
 
 // SetLogLevel sets the output log level for the standard logger.
 func (l *Logger) SetLogLevel(ll LogLevel) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
 	if ll >= Debug && ll <= Fatal {
-		l.level = ll
+		l.level.set(ll)
 	}
 }
 
@@ -123,14 +125,14 @@ func (l *Logger) EnableTraceOutput() {
 }
 
 func (l *Logger) outputln(ll LogLevel, v ...interface{}) {
-	if l.level <= ll {
-		v = append([]interface{}{ll}, v...)
+	if l.level.get() <= ll {
+		v = append([]interface{}{ll.String()}, v...)
 		l.logger.Output(calldepth, fmt.Sprintln(v...))
 	}
 }
 
 func (l *Logger) outputf(ll LogLevel, format string, v ...interface{}) {
-	if l.level <= ll {
+	if l.level.get() <= ll {
 		l.logger.Output(calldepth, fmt.Sprintf(ll.String()+" "+format, v...))
 	}
 }
