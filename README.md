@@ -4,14 +4,14 @@ A simple logging layer on top of Go's log pkg
 
 ## Installation
 
-The typical `go get github.com/caglar10ur/gologger` will install gologger.
+The typical `go get github.com/caglar10ur/logger` will install logger.
 
 ## Example usage
 
 ```go
 package main
 
-import "github.com/caglar10ur/gologger"
+import "github.com/caglar10ur/logger"
 
 func main() {
     l := logger.New(nil)
@@ -29,4 +29,4 @@ func main() {
 
 ## Status
 
-[![Build Status](https://secure.travis-ci.org/caglar10ur/gologger.png)](http://travis-ci.org/caglar10ur/gologger)
+[![Build Status](https://secure.travis-ci.org/caglar10ur/logger.png)](http://travis-ci.org/caglar10ur/logger)
